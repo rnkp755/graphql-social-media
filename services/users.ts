@@ -1,6 +1,9 @@
 import { createHmac, randomUUID } from "node:crypto";
 import db from "../db";
 import { users } from "../db/schema/users";
+import { eq } from "drizzle-orm";
+import JWT from "jsonwebtoken";
+import "dotenv/config";
 
 type Gender = "male" | "female" | "other";
 
@@ -10,6 +13,11 @@ export interface createUserPayload {
 	password: string;
 	avatar?: string;
 	gender?: Gender;
+}
+
+export interface GetUserTokenPayload {
+	email: string;
+	password: string;
 }
 
 class UserService {
@@ -60,6 +68,80 @@ class UserService {
 			console.error("Error creating user:", error);
 			throw new Error("Failed to create user");
 		}
+	}
+	public static async getUserById(id: string) {
+		try {
+			const user = await db
+				.select()
+				.from(users)
+				.where(eq(users.id, id))
+				.limit(1)
+				.then((rows) => rows[0]);
+			if (!user) {
+				throw new Error("User not found");
+			}
+			return {
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				avatar: user.avatar,
+				gender: user.gender,
+				role: user.role,
+			};
+		} catch (error) {
+			console.error("Error fetching user by ID:", error);
+			throw new Error("Failed to fetch user");
+		}
+	}
+	public static async getUserByEmail(email: string) {
+		try {
+			const user = await db
+				.select()
+				.from(users)
+				.where(eq(users.email, email))
+				.limit(1)
+				.then((rows) => rows[0]);
+			if (!user) {
+				throw new Error("User not found");
+			}
+			return {
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				avatar: user.avatar,
+				gender: user.gender,
+				role: user.role,
+			};
+		} catch (error) {
+			console.error("Error fetching user by email:", error);
+			throw new Error("Failed to fetch user by email");
+		}
+	}
+	public static async getUserToken(payload: GetUserTokenPayload) {
+		const { email, password } = payload;
+		const user = await db
+			.select()
+			.from(users)
+			.where(eq(users.email, email))
+			.limit(1)
+			.then((rows) => rows[0]);
+		if (!user) throw new Error("user not found");
+
+		const userSalt = user.salt;
+		const usersHashPassword = UserService.generateHash(password, userSalt);
+
+		if (usersHashPassword !== user.password)
+			throw new Error("Incorrect Password");
+
+		// Gen Token
+		const token = JWT.sign(
+			{ id: user.id, email: user.email },
+			process.env.JWT_SECRET!
+		);
+		return token;
+	}
+	public static decodeJWTToken(token: string) {
+		return JWT.verify(token, process.env.JWT_SECRET!);
 	}
 }
 

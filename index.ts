@@ -3,6 +3,7 @@ import { expressMiddleware } from "@apollo/server/express4";
 import cors from "cors";
 import createApolloGraphqlServer from "./graphql";
 import db from "./db";
+import UserService from "./services/users";
 
 async function main() {
 	try {
@@ -23,7 +24,19 @@ async function main() {
 			// @ts-ignore
 			expressMiddleware(gqlServer, {
 				context: async ({ req }) => {
-					return { headers: req.headers };
+					// @ts-ignore
+					const token = req
+						.header("Authorization")
+						?.replace("Bearer ", "");
+
+					try {
+						const user = UserService.decodeJWTToken(
+							token as string
+						);
+						return { user };
+					} catch (error) {
+						return {};
+					}
 				},
 			})
 		);
