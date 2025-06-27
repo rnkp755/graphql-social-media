@@ -1,6 +1,6 @@
 import express from "express";
 import { expressMiddleware } from "@apollo/server/express4";
-import bodyParser from "body-parser";
+import cors from "cors";
 import createApolloGraphqlServer from "./graphql";
 import db from "./db";
 
@@ -8,6 +8,9 @@ async function main() {
 	try {
 		const app = express();
 		const PORT = Number(process.env.PORT) || 4000;
+
+		app.use(cors());
+		app.use(express.json());
 
 		app.get("/", (req, res) => {
 			res.json({ message: "Server is up and running" });
@@ -17,7 +20,6 @@ async function main() {
 
 		app.use(
 			"/graphql",
-			bodyParser.json(),
 			// @ts-ignore
 			expressMiddleware(gqlServer, {
 				context: async ({ req }) => {

@@ -49,7 +49,7 @@ class UserService {
 				name: newUser.name,
 				email: newUser.email,
 				password:
-					"Intentionally_Exposed_To_Show_Hash" + newUser.password,
+					"Intentionally_Exposed_To_Show_Hash_" + newUser.password,
 				avatar: newUser.avatar,
 				gender: newUser.gender,
 				role: newUser.role,

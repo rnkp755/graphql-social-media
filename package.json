@@ -12,6 +12,7 @@
 	},
 	"devDependencies": {
 		"@types/bun": "latest",
+		"@types/cors": "^2.8.19",
 		"@types/pg": "^8.15.4",
 		"drizzle-kit": "^0.31.4",
 		"tsc-watch": "^7.1.1",
@@ -23,7 +24,7 @@
 	"dependencies": {
 		"@apollo/server": "^4.12.2",
 		"@types/express": "^5.0.3",
-		"body-parser": "^2.2.0",
+		"cors": "^2.8.5",
 		"dotenv": "^16.6.0",
 		"drizzle-orm": "^0.44.2",
 		"express": "^5.1.0",
