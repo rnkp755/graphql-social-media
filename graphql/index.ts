@@ -18,6 +18,9 @@ const createApolloGraphqlServer = async () => {
 				...User.resolvers.Mutation,
 				...Post.resolvers.Mutation,
 			},
+			Post: {
+				...Post.resolvers.Post,
+			},
 		},
 	});
 
