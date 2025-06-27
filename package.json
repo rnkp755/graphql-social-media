@@ -1,0 +1,33 @@
+{
+	"name": "social-media-graphql",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"db:push": "bunx drizzle-kit generate && bunx drizzle-kit migrate",
+		"db:generate": "bunx drizzle-kit generate",
+		"db:migrate": "bunx drizzle-kit migrate",
+		"db:studio": "bunx drizzle-kit studio",
+		"dev": "bunx tsx watch index.ts"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/pg": "^8.15.4",
+		"drizzle-kit": "^0.31.4",
+		"tsc-watch": "^7.1.1",
+		"tsx": "^4.20.3"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@apollo/server": "^4.12.2",
+		"@types/express": "^5.0.3",
+		"body-parser": "^2.2.0",
+		"dotenv": "^16.6.0",
+		"drizzle-orm": "^0.44.2",
+		"express": "^5.1.0",
+		"graphql": "^16.11.0",
+		"pg": "^8.16.2"
+	}
+}
