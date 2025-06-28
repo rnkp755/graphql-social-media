@@ -3,8 +3,7 @@ scalar DateTime
 
 type Post {
     id: ID!
-    title: String!
-    description: String!
+    description: String
     image: String
     postedBy: User!
     createdAt: DateTime
@@ -16,6 +15,6 @@ type Query {
 }
 
 type Mutation {
-    createPost(title: String!, description: String!, image: String): Post
+    createPost(description: String, image: String): Post
 }
 `;

@@ -4,8 +4,7 @@ import db from "../db";
 import { eq } from "drizzle-orm";
 
 export interface createPostPayload {
-    title: string;
-    description: string;
+    description?: string;
     image?: string;
     userId: string;
 }
@@ -13,12 +12,14 @@ export interface createPostPayload {
 class PostService {
     public static async createPost(payload: createPostPayload) {
         try {
-            const { title, description, image, userId } = payload;
+            const { description, image, userId } = payload;
+            if (!description && !image) {
+                throw new Error("Description or image is required to create a post");
+            }
             
             const insertedPosts = await db
                 .insert(posts)
                 .values({
-                    title,
                     description,
                     image,
                     postedBy: userId,

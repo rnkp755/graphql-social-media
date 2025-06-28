@@ -4,8 +4,7 @@ import { sql } from "drizzle-orm";
 
 export const posts = pgTable("posts", {
 	id: uuid().primaryKey().defaultRandom(),
-	title: varchar({ length: 255 }).notNull(),
-	description: varchar({ length: 1000 }).notNull(),
+	description: varchar({ length: 1000 }),
 	image: varchar({ length: 255 }),
     postedBy: uuid().notNull().references(() => users.id),
     createdAt: timestamp("created_at").defaultNow(),
