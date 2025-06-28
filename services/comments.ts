@@ -62,6 +62,7 @@ class CommentService {
 				.update(posts)
 				.set({
 					commentsCount: (post.commentsCount || 0) + 1,
+					updatedAt: new Date(),
 				})
 				.where(eq(posts.id, postId));
 
@@ -145,6 +146,7 @@ class CommentService {
 				.update(comments)
 				.set({
 					content: content.trim(),
+					updatedAt: new Date(),
 				})
 				.where(eq(comments.id, commentId))
 				.returning();
@@ -208,6 +210,7 @@ class CommentService {
 				.update(posts)
 				.set({
 					commentsCount: Math.max((post.commentsCount || 0) - 1, 0),
+					updatedAt: new Date(),
 				})
 				.where(eq(posts.id, existingComment.postId));
 

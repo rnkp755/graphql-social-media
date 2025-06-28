@@ -1,4 +1,4 @@
 import { typeDefs } from "./typedefs";
 import { resolvers } from "./resolvers";
 
-export const Post = { typeDefs, resolvers };
+export const Like = { typeDefs, resolvers };

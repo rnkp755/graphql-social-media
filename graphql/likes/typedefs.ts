@@ -14,6 +14,7 @@ type LikeResponse {
     postId: String
     userId: String
     createdAt: DateTime
+    success: Boolean! # Ensure success is non-nullable
 }
 
 type Mutation {

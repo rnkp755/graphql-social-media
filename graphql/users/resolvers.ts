@@ -40,7 +40,7 @@ const queries = {
 		return res ?? null;
 	},
 	getUserByEmail: async (_: any, args: { email: string }) => {
-		const res = await UserService.getUserById(args.email);
+		const res = await UserService.getUserByEmail(args.email);
 		return res ?? null;
 	},
 	searchUsers: async (_: any, args: { query: string }) => {

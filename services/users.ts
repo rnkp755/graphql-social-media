@@ -102,6 +102,7 @@ class UserService {
 	}
 	public static async getUserByEmail(email: string) {
 		try {
+			// console.log("Fetching user by email:", email);
 			const user = await db
 				.select()
 				.from(users)

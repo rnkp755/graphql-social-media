@@ -32,17 +32,21 @@ class LikeService {
 				throw new Error("User not found");
 			}
 
-			const likeExists = await db
+			const existingLike = await db
 				.select()
 				.from(likes)
 				.where(and(eq(likes.postId, postId), eq(likes.userId, userId)))
 				.limit(1)
-				.then((rows: any) => rows.length > 0);
+				.then((rows) => rows[0]);
 
-			if (likeExists) {
+			if (existingLike) {
 				return {
 					message: "You have already liked this post",
-					...likeExists[0],
+					id: existingLike.id,
+					postId: existingLike.postId,
+					userId: existingLike.userId,
+					createdAt: existingLike.createdAt,
+					success: false,
 				};
 			}
 
@@ -58,17 +62,27 @@ class LikeService {
 				throw new Error("Failed to like post");
 			}
 
+			const newLike = insertedLike[0];
+			if (!newLike) {
+				throw new Error("Failed to create like record");
+			}
+
 			// Update the likes count in the posts table
 			await db
 				.update(posts)
 				.set({
 					likesCount: (post.likesCount || 0) + 1,
+					updatedAt: new Date(),
 				})
 				.where(eq(posts.id, postId));
 
 			return {
 				message: "Post liked successfully",
-				...insertedLike[0],
+				success: true,
+				id: newLike.id,
+				postId: newLike.postId,
+				userId: newLike.userId,
+				createdAt: newLike.createdAt,
 			};
 		} catch (error) {
 			console.error("Error liking post:", error);
@@ -125,18 +139,27 @@ class LikeService {
 				throw new Error("Failed to unlike post");
 			}
 
+			const removedLike = deletedLike[0];
+			if (!removedLike) {
+				throw new Error("Failed to remove like record");
+			}
+
 			// Update the likes count in the posts table (decrement)
 			await db
 				.update(posts)
 				.set({
 					likesCount: Math.max((post.likesCount || 0) - 1, 0),
+					updatedAt: new Date(),
 				})
 				.where(eq(posts.id, postId));
 
 			return {
 				message: "Post unliked successfully",
 				success: true,
-				...deletedLike[0],
+				id: removedLike.id,
+				postId: removedLike.postId,
+				userId: removedLike.userId,
+				createdAt: removedLike.createdAt,
 			};
 		} catch (error) {
 			console.error("Error unliking post:", error);
