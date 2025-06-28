@@ -145,6 +145,7 @@ class UserService {
 			{ id: user.id, email: user.email },
 			process.env.JWT_SECRET!
 		);
+
 		return token;
 	}
 	public static decodeJWTToken(token: string) {
