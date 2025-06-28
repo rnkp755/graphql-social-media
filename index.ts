@@ -11,12 +11,20 @@ async function main() {
 		const app = express();
 		const PORT = Number(process.env.PORT) || 4000;
 
-		app.use(cors({
-			origin: true,
-			credentials: true,
-		}));
+		app.use(
+			cors({
+				origin: true,
+				credentials: true,
+			})
+		);
 		app.use(graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 1 }));
 		app.use(express.json());
+		app.use((req, res, next) => {
+			if (!req.body) {
+				req.body = {}; // Prevent Apollo from failing on undefined/null req.body
+			}
+			next();
+		});
 
 		app.get("/", (req, res) => {
 			res.json({ message: "Server is up and running" });

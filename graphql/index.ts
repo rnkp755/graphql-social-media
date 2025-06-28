@@ -30,6 +30,7 @@ const createApolloGraphqlServer = async () => {
 			},
 		},
 		csrfPrevention: false,
+		introspection: true,
 	});
 
 	await gqlServer.start();
