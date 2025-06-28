@@ -20,8 +20,25 @@ const mutations = {
 				console.log("Starting media processing...", media); // Debug log
 
 				// 1. Get file stream and metadata
-				const { createReadStream, filename, mimetype } = await media;
-				console.log("Received file:", filename, "Type:", mimetype); // Debug log
+				const filePromise = await media;
+				console.log("Received file promise:", filePromise); // Debug log
+				console.log(
+					"File promise properties:",
+					Object.keys(filePromise)
+				); // Debug log
+
+				// Access the actual file from the promise-like object
+				const file = filePromise.file;
+				console.log("Actual file object:", file); // Debug log
+				console.log("File object properties:", Object.keys(file)); // Debug log
+
+				// Extract properties from the actual file object
+				const { createReadStream, filename, mimetype } = file;
+				console.log("File details:", { filename, mimetype }); // Debug log
+
+				// Create the read stream
+				const stream = createReadStream();
+				console.log("Stream created:", stream); // Debug log
 
 				// 2. Create temp directory path
 				const currentDir = getDirname(import.meta.url);
@@ -39,11 +56,10 @@ const mutations = {
 				// 4. Create write stream and pipe the file
 				console.log("Starting file stream..."); // Debug log
 				await new Promise((resolve, reject) => {
-					const readStream = createReadStream();
 					const writeStream = createWriteStream(tempPath);
 
 					// Add stream event listeners for debugging
-					readStream.on("error", (error: any) => {
+					stream.on("error", (error: any) => {
 						console.error("Read stream error:", error);
 						reject(error);
 					});
@@ -58,26 +74,32 @@ const mutations = {
 						resolve(true);
 					});
 
-					readStream.pipe(writeStream);
+					stream.pipe(writeStream);
 				});
 
 				console.log("File saved locally, uploading to Cloudinary..."); // Debug log
 
 				// 5. Upload to Cloudinary
-				mediaUrl = await uploadOnCloudinary(tempPath);
-				console.log("Cloudinary upload result:", mediaUrl); // Debug log
+				const uploadResult = await uploadOnCloudinary(tempPath);
+				console.log("Cloudinary upload result:", uploadResult); // Debug log
 
-				if (!mediaUrl) throw new Error("Cloudinary returned no URL");
+				if (!uploadResult || !uploadResult.secure_url) {
+					throw new Error("Cloudinary upload failed");
+				}
 
-				mediaType = mimetype;
+				mediaUrl = uploadResult.secure_url;
+
+				mediaType = uploadResult.resource_type;
 
 				// 6. Clean up temp file
-				await fs.promises.unlink(tempPath);
+				// await fs.promises.unlink(tempPath);
 				console.log("Temp file cleaned up"); // Debug log
 			} catch (error) {
 				console.error("Full error details:", error); // Detailed error log
+				const errorMessage =
+					error instanceof Error ? error.message : String(error);
 				throw new Error(
-					`Failed to process media upload: ${error.message}`
+					`Failed to process media upload: ${errorMessage}`
 				);
 			}
 		}
