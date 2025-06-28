@@ -17,37 +17,62 @@ const mutations = {
 		let mediaType: string | null = null;
 
 		if (media) {
+			let tempPath: string | null = null;
 			try {
 				console.log("Starting media processing...", media); // Debug log
 
 				// 1. Get file stream and metadata
-				const filePromise = await media;
-				console.log("Received file promise:", filePromise); // Debug log
-				console.log(
-					"File promise properties:",
-					Object.keys(filePromise)
-				); // Debug log
+				const fileUpload = await media;
+				console.log("Received file upload:", fileUpload); // Debug log
 
-				// Access the actual file from the promise-like object
-				const file = filePromise.file;
+				// Check if fileUpload exists and has the expected structure
+				if (!fileUpload) {
+					throw new Error("No file data received");
+				}
+
+				console.log("File upload properties:", Object.keys(fileUpload)); // Debug log
+
+				// Handle different possible structures
+				let file;
+				if (fileUpload.file) {
+					// Structure: { file: { createReadStream, filename, mimetype } }
+					file = fileUpload.file;
+				} else if (fileUpload.createReadStream) {
+					// Structure: { createReadStream, filename, mimetype }
+					file = fileUpload;
+				} else {
+					throw new Error("Invalid file upload structure");
+				}
+
 				console.log("Actual file object:", file); // Debug log
-				console.log("File object properties:", Object.keys(file)); // Debug log
+				if (file) {
+					console.log("File object properties:", Object.keys(file)); // Debug log
+				}
 
-				// Extract properties from the actual file object
+				// Extract properties from the file object
 				const { createReadStream, filename, mimetype } = file;
 				console.log("File details:", { filename, mimetype }); // Debug log
 
+				if (!createReadStream || !filename) {
+					throw new Error(
+						"Missing required file properties (createReadStream or filename)"
+					);
+				}
+
 				// Create the read stream
-				const stream = createReadStream();
-				console.log("Stream created:", stream); // Debug log
+				let stream;
+				try {
+					stream = createReadStream();
+					console.log("Stream created:", stream); // Debug log
+				} catch (streamError) {
+					console.error("Error creating stream:", streamError);
+					throw new Error("Failed to create file stream");
+				}
 
 				// 2. Create temp directory path
 				const currentDir = getDirname(import.meta.url);
-				const tempDir = path.join(currentDir, "../../../tmp");
-				const tempPath = path.join(
-					tempDir,
-					`${Date.now()}-${filename}`
-				);
+				const tempDir = path.join(currentDir, "../../../public/temp");
+				tempPath = path.join(tempDir, `${Date.now()}-${filename}`);
 				console.log("Temp path:", tempPath); // Debug log
 
 				// 3. Ensure directory exists
@@ -56,23 +81,40 @@ const mutations = {
 
 				// 4. Create write stream and pipe the file
 				console.log("Starting file stream..."); // Debug log
+				if (!tempPath) {
+					throw new Error("Temp path not defined");
+				}
+
 				await new Promise((resolve, reject) => {
-					const writeStream = createWriteStream(tempPath);
+					const writeStream = createWriteStream(tempPath!);
+
+					// Set a timeout for the operation
+					const timeout = setTimeout(() => {
+						reject(new Error("File upload timeout"));
+					}, 30000); // 30 seconds timeout
 
 					// Add stream event listeners for debugging
 					stream.on("error", (error: any) => {
+						clearTimeout(timeout);
 						console.error("Read stream error:", error);
 						reject(error);
 					});
 
 					writeStream.on("error", (error) => {
+						clearTimeout(timeout);
 						console.error("Write stream error:", error);
 						reject(error);
 					});
 
 					writeStream.on("finish", () => {
+						clearTimeout(timeout);
 						console.log("File write completed");
 						resolve(true);
+					});
+
+					writeStream.on("close", () => {
+						clearTimeout(timeout);
+						console.log("Write stream closed");
 					});
 
 					stream.pipe(writeStream);
@@ -89,14 +131,25 @@ const mutations = {
 				}
 
 				mediaUrl = uploadResult.secure_url;
-
 				mediaType = uploadResult.resource_type;
 
-				// 6. Clean up temp file
-				// await fs.promises.unlink(tempPath);
-				console.log("Temp file cleaned up"); // Debug log
+				console.log("Media upload completed successfully"); // Debug log
 			} catch (error) {
 				console.error("Full error details:", error); // Detailed error log
+
+				// Clean up temp file if it exists
+				if (tempPath) {
+					try {
+						await fs.promises.unlink(tempPath);
+						console.log("Temp file cleaned up after error");
+					} catch (cleanupError) {
+						console.error(
+							"Failed to clean up temp file:",
+							cleanupError
+						);
+					}
+				}
+
 				const errorMessage =
 					error instanceof Error ? error.message : String(error);
 				throw new Error(
