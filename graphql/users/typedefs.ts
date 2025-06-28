@@ -19,6 +19,7 @@ type Query {
     getUserByEmail(email: String!): User
     getUserToken(email: String!, password: String!): String
     getCurrentLoggedInUser: User
+    searchUsers(query: String!): [User]
 }
 
 type Mutation {

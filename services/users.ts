@@ -1,8 +1,9 @@
 import { createHmac, randomUUID } from "node:crypto";
 import db from "../db";
 import { users } from "../db/schema/users";
-import { eq } from "drizzle-orm";
+import { eq, or, like } from "drizzle-orm";
 import JWT from "jsonwebtoken";
+import Fuse from "fuse.js";
 import "dotenv/config";
 
 type Gender = "male" | "female" | "other";
@@ -142,6 +143,58 @@ class UserService {
 	}
 	public static decodeJWTToken(token: string) {
 		return JWT.verify(token, process.env.JWT_SECRET!);
+	}
+	public static async searchUsers(query: string) {
+		try {
+			// STEP 1 → SQL partial match
+			const partialUsers = await db
+				.select()
+				.from(users)
+				.where(
+					or(
+						like(users.name, `%${query}%`),
+						like(users.email, `%${query}%`)
+					)
+				)
+				.limit(10);
+
+			if (partialUsers.length >= 5) {
+				// Enough results, return immediately
+				return partialUsers.map((user) => ({
+					id: user.id,
+					name: user.name,
+					email: user.email,
+					avatar: user.avatar,
+				}));
+			}
+
+			// STEP 2 → fallback to fuzzy search
+
+			// Fetch a broader chunk for fuzzy search
+			const allUsers = await db.select().from(users).limit(500);
+
+			const fuse = new Fuse(allUsers, {
+				keys: ["name", "email"],
+				threshold: 0.3,
+			});
+
+			const result = fuse.search(query);
+
+			return result.slice(0, 10).map((res) => {
+				const user = res.item;
+				return {
+					id: user.id,
+					name: user.name,
+					email: user.email,
+					avatar: user.avatar,
+					role: user.role,
+					gender: user.gender,
+				};
+			});
+		} catch (error) {
+			console.error("Error searching users:", error);
+			throw new Error("Failed to search users");
+		}
 	}
 }
 

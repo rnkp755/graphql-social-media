@@ -17,6 +17,10 @@ const queries = {
 		const res = await UserService.getUserById(args.email);
 		return res ?? null;
 	},
+	searchUsers: async (_: any, args: { query: string }) => {
+		const res = await UserService.searchUsers(args.query);
+		return res ?? null;
+	},
 	getUserToken: async (_: any, args: { email: string; password: string }) => {
 		const res = await UserService.getUserToken(args);
 		return res ?? null;
