@@ -1,7 +1,8 @@
 import { createHmac, randomUUID } from "node:crypto";
 import db from "../db";
 import { users } from "../db/schema/users";
-import { eq, or, like } from "drizzle-orm";
+import { follows } from "../db/schema/follows";
+import { eq, or, and, like } from "drizzle-orm";
 import JWT from "jsonwebtoken";
 import Fuse from "fuse.js";
 import "dotenv/config";
@@ -19,6 +20,11 @@ export interface createUserPayload {
 export interface GetUserTokenPayload {
 	email: string;
 	password: string;
+}
+
+export interface followUserPayload {
+	followerId: string;
+	followingId: string;
 }
 
 class UserService {
@@ -194,6 +200,111 @@ class UserService {
 		} catch (error) {
 			console.error("Error searching users:", error);
 			throw new Error("Failed to search users");
+		}
+	}
+	public static async followUser(payload: followUserPayload) {
+		try {
+			// Check if followerId and followingId are valid users
+			const usersExist = await db
+				.select()
+				.from(users)
+				.where(
+					or(
+						eq(users.id, payload.followerId),
+						eq(users.id, payload.followingId)
+					)
+				)
+				.limit(2);
+
+			if (usersExist.length < 2) {
+				throw new Error("One or both users not found.");
+			}
+
+			// Check if follow already exists
+			const existingFollow = await db
+				.select()
+				.from(follows)
+				.where(
+					and(
+						eq(follows.followerId, payload.followerId),
+						eq(follows.followingId, payload.followingId)
+					)
+				)
+				.limit(1)
+				.then((rows) => rows[0]);
+
+			if (existingFollow) {
+				return {
+					message: "User already followed.",
+					...existingFollow,
+				};
+			}
+
+			const followRows = await db
+				.insert(follows)
+				.values(payload)
+				.returning();
+
+			const follow = followRows[0];
+
+			if (!follow) {
+				throw new Error("Failed to insert follow record.");
+			}
+
+			return {
+				message: "User followed successfully.",
+				...follow,
+			};
+		} catch (error) {
+			console.error("Error following user:", error);
+			throw new Error("Failed to follow user");
+		}
+	}
+	public static async unfollowUser(payload: followUserPayload) {
+		try {
+			// Check if follow relationship exists
+			const existingFollow = await db
+				.select()
+				.from(follows)
+				.where(
+					and(
+						eq(follows.followerId, payload.followerId),
+						eq(follows.followingId, payload.followingId)
+					)
+				)
+				.limit(1)
+				.then((rows) => rows[0]);
+
+			console.log("Existing Follow:", existingFollow);
+			if (!existingFollow) {
+				return {
+					message: "User was not being followed.",
+				};
+			}
+
+			const unfollowRows = await db
+				.delete(follows)
+				.where(
+					and(
+						eq(follows.followerId, payload.followerId),
+						eq(follows.followingId, payload.followingId)
+					)
+				)
+				.returning();
+
+			const unfollow = unfollowRows[0];
+
+			if (!unfollow) {
+				throw new Error("Failed to unfollow user.");
+			}
+
+			return {
+				message: "User unfollowed successfully.",
+				...unfollow,
+			};
+		} catch (error) {
+			console.error("Error unfollowing user:", error);
+			throw new Error("Failed to unfollow user");
 		}
 	}
 }

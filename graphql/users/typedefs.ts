@@ -14,6 +14,15 @@ type User {
     updatedAt: DateTime
 }
 
+type FollowData {
+    message: String
+    id: ID
+    followerId: String
+    followingId: String
+    createdAt: DateTime
+    updatedAt: DateTime
+}
+
 type Query {
     getUserById(id: String!): User
     getUserByEmail(email: String!): User
@@ -30,5 +39,7 @@ type Mutation {
         avatar: String
         gender: String
     ): User
+    followUser(followingId: String!): FollowData
+    unfollowUser(followingId: String!): FollowData
 }
 `;

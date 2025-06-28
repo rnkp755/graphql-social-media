@@ -1,9 +1,35 @@
 import UserService from "../../services/users";
-import type { createUserPayload } from "../../services/users";
+import type {
+	createUserPayload,
+	followUserPayload,
+} from "../../services/users";
 
 const mutations = {
 	createUser: async (_: any, args: createUserPayload) => {
 		const res = await UserService.createUser(args);
+		return res ?? null;
+	},
+	followUser: async (_: any, args: followUserPayload, context: any) => {
+		if (!context || !context.user) {
+			throw new Error("You must be logged in to follow a user");
+		}
+		if (context.user.id === args.followerId) {
+			throw new Error("You cannot follow yourself");
+		}
+		args.followerId = context.user.id;
+		console.log(args);
+		const res = await UserService.followUser(args);
+		return res ?? null;
+	},
+	unfollowUser: async (_: any, args: followUserPayload, context: any) => {
+		if (!context || !context.user) {
+			throw new Error("You must be logged in to unfollow a user");
+		}
+		if (context.user.id === args.followerId) {
+			throw new Error("You cannot unfollow yourself");
+		}
+		args.followerId = context.user.id;
+		const res = await UserService.unfollowUser(args);
 		return res ?? null;
 	},
 };
