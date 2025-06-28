@@ -2,64 +2,94 @@ import { uploadOnCloudinary } from "../../lib/cloudinary";
 import PostService from "../../services/posts";
 import type { createPostPayload } from "../../services/posts";
 import UserService from "../../services/users";
-import fs from "fs";
+import fs, { createWriteStream, unlink } from "fs";
 import path from "path";
+import { getDirname } from "../../lib/path";
+import { GraphQLUpload } from "graphql-upload-minimal";
 
 const mutations = {
-	createPost: async (_: any, args: any, context: any) => {
+	createPost: async (_: any, { media, ...args }: any, context: any) => {
 		const userId = context?.user?.id;
-		if (!userId) {
-			throw new Error("Unauthorized");
-		}
+		if (!userId) throw new Error("Unauthorized");
 
-		let mediaUrl: any;
+		let mediaUrl: string | null = null;
 		let mediaType: string | null = null;
 
-		if (args.media) {
-			// args.media is a Promise
-			const { createReadStream, filename, mimetype } = await args.media;
+		if (media) {
+			try {
+				console.log("Starting media processing...", media); // Debug log
 
-			// Create a temp path
-			const tempPath = path.join(
-				__dirname,
-				`../../../tmp/${Date.now()}-${filename}`
-			);
+				// 1. Get file stream and metadata
+				const { createReadStream, filename, mimetype } = await media;
+				console.log("Received file:", filename, "Type:", mimetype); // Debug log
 
-			// Pipe the file stream to local disk
-			await new Promise<void>((resolve, reject) => {
-				const writeStream = fs.createWriteStream(tempPath);
-				createReadStream()
-					.pipe(writeStream)
-					.on("finish", resolve)
-					.on("error", reject);
-			});
+				// 2. Create temp directory path
+				const currentDir = getDirname(import.meta.url);
+				const tempDir = path.join(currentDir, "../../../tmp");
+				const tempPath = path.join(
+					tempDir,
+					`${Date.now()}-${filename}`
+				);
+				console.log("Temp path:", tempPath); // Debug log
 
-			// Upload to Cloudinary
-			mediaUrl = await uploadOnCloudinary(tempPath);
+				// 3. Ensure directory exists
+				await fs.promises.mkdir(tempDir, { recursive: true });
+				console.log("Temp directory verified"); // Debug log
 
-			if (!mediaUrl) {
-				throw new Error("Failed to upload media");
+				// 4. Create write stream and pipe the file
+				console.log("Starting file stream..."); // Debug log
+				await new Promise((resolve, reject) => {
+					const readStream = createReadStream();
+					const writeStream = createWriteStream(tempPath);
+
+					// Add stream event listeners for debugging
+					readStream.on("error", (error: any) => {
+						console.error("Read stream error:", error);
+						reject(error);
+					});
+
+					writeStream.on("error", (error) => {
+						console.error("Write stream error:", error);
+						reject(error);
+					});
+
+					writeStream.on("finish", () => {
+						console.log("File write completed");
+						resolve(true);
+					});
+
+					readStream.pipe(writeStream);
+				});
+
+				console.log("File saved locally, uploading to Cloudinary..."); // Debug log
+
+				// 5. Upload to Cloudinary
+				mediaUrl = await uploadOnCloudinary(tempPath);
+				console.log("Cloudinary upload result:", mediaUrl); // Debug log
+
+				if (!mediaUrl) throw new Error("Cloudinary returned no URL");
+
+				mediaType = mimetype;
+
+				// 6. Clean up temp file
+				await fs.promises.unlink(tempPath);
+				console.log("Temp file cleaned up"); // Debug log
+			} catch (error) {
+				console.error("Full error details:", error); // Detailed error log
+				throw new Error(
+					`Failed to process media upload: ${error.message}`
+				);
 			}
-
-			console.log("Media uploaded to Cloudinary:", mediaUrl);
-
-			mediaType = mimetype;
-
-			// Optionally delete local file
-			fs.unlink(tempPath, (err) => {
-				if (err) console.error("Failed to delete temp file:", err);
-			});
 		}
 
-		const payload: createPostPayload = {
+		const payload = {
 			...args,
 			userId,
 			mediaUrl,
 			mediatype: mediaType,
 		};
-		console.log("Creating post with payload:", payload);
-		const post = await PostService.createPost(payload);
-		return post;
+
+		return PostService.createPost(payload);
 	},
 };
 
@@ -84,6 +114,7 @@ const postResolvers = {
 };
 
 export const resolvers = {
+	Upload: GraphQLUpload,
 	Query: queries,
 	Mutation: mutations,
 	...postResolvers,

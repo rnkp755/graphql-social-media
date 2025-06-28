@@ -22,6 +22,7 @@ const createApolloGraphqlServer = async () => {
 				...Post.resolvers.Post,
 			},
 		},
+		csrfPrevention: false,
 	});
 
 	await gqlServer.start();
