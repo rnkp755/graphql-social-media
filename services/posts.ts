@@ -3,7 +3,7 @@ import { posts } from "../db/schema/posts";
 import { follows } from "../db/schema/follows";
 import { users } from "../db/schema/users";
 import db from "../db";
-import { eq, or, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 
 export type createPostPayload = {
 	description?: string;
