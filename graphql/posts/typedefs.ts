@@ -17,6 +17,8 @@ type Post {
 
 type Query {
     getPostById(id: ID!): Post
+    getFeedPosts(limit: Int): [Post]
+    getUserPosts(userId: ID!, limit: Int): [Post]
 }
 
 type Mutation {

@@ -6,6 +6,7 @@ import fs, { createWriteStream, unlink } from "fs";
 import path from "path";
 import { getDirname } from "../../lib/path";
 import { GraphQLUpload } from "graphql-upload-minimal";
+import { get } from "http";
 
 const mutations = {
 	createPost: async (_: any, { media, ...args }: any, context: any) => {
@@ -120,12 +121,37 @@ const queries = {
 		const res = await PostService.getPostById(args.id);
 		return res ?? null;
 	},
+	getFeedPosts: async (_: any, args: { limit?: number }, context: any) => {
+		if (!context?.user?.id) {
+			throw new Error("Unauthorized");
+		}
+		const { limit } = args;
+		const posts = await PostService.getFeedPosts(context.user.id, limit);
+		return posts;
+	},
+	getUserPosts: async (_: any, args: { userId: string; limit?: number }) => {
+		const { userId, limit } = args;
+		if (!userId) {
+			throw new Error("User ID is required");
+		}
+		const posts = await PostService.getPostsByUserId(userId, limit);
+		return posts;
+	},
 };
 
 const postResolvers = {
 	Post: {
 		postedBy: async (parent: any) => {
-			// parent.postedBy is the user id in your posts table
+			// If we already have user data from the enhanced queries, use it
+			if (parent.userName && parent.userAvatar) {
+				return {
+					id: parent.postedBy,
+					name: parent.userName,
+					avatar: parent.userAvatar,
+				};
+			}
+
+			// Otherwise, fetch the user data
 			const userId = parent.userId || parent.postedBy;
 			if (!userId) return null;
 
