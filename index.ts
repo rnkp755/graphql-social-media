@@ -4,6 +4,7 @@ import cors from "cors";
 import createApolloGraphqlServer from "./graphql";
 import db from "./db";
 import UserService from "./services/users";
+import ScheduledPostService from "./services/scheduledPosts";
 import { graphqlUploadExpress } from "graphql-upload-minimal";
 
 async function main() {
@@ -56,6 +57,10 @@ async function main() {
 
 		await db.execute(`SELECT 1`);
 		console.log("✅ Connected to the database");
+
+		// Initialize the scheduled post processor
+		ScheduledPostService.initializeScheduler();
+		console.log("✅ Scheduled post processor initialized");
 
 		app.listen(PORT, () =>
 			console.log(`✅ Server started at http://localhost:${PORT}`)
